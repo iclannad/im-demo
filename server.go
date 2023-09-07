@@ -55,15 +55,10 @@ func (s *Server) Handler(conn net.Conn) {
 	//...当前链接的业务
 	fmt.Println("链接建立成功")
 
-	user := NewUser(conn)
+	user := NewUser(conn, s)
 
 	// 用户上线，将用户加入到onlineMap中
-	s.mapLock.Lock()
-	s.OnlineMap[user.Name] = user
-	s.mapLock.Unlock()
-
-	// 广播当前用户上线消息
-	s.BroadCast(user, "was online")
+	user.Online()
 
 	// 接受客户端发送的消息
 	go func() {
@@ -71,17 +66,15 @@ func (s *Server) Handler(conn net.Conn) {
 		for {
 			n, err := conn.Read(buf)
 			if n == 0 {
-				s.BroadCast(user, "offline")
+				user.Offline()
 				return
 			}
 			if err != nil && err != io.EOF {
 				fmt.Println("Conn Read err:", err)
 				return
 			}
-
 			msg := string(buf[:n-1])
-			// 将得到的信息进行广播
-			s.BroadCast(user, msg)
+			user.DoMessage(msg)
 		}
 	}()
 
