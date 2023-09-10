@@ -1,6 +1,10 @@
 package main
 
-import "net"
+import (
+	"fmt"
+	"net"
+	"strings"
+)
 
 type User struct {
 	Name   string
@@ -59,7 +63,39 @@ func (u *User) Offline() {
 	u.Server.BroadCast(u, "was offline")
 }
 
+// 用户下线的业务
+func (u *User) SendMsg(msg string) {
+	u.Conn.Write([]byte(msg))
+}
+
 // 用户处理消息业务
 func (u *User) DoMessage(msg string) {
-	u.Server.BroadCast(u, msg)
+	if msg == "who" {
+		// 查询当前在线用户有哪些
+		u.Server.mapLock.Lock()
+		for _, user := range u.Server.OnlineMap {
+			onlineMsg := fmt.Sprintf("[%s]%s is Online..\n", user.Addr, user.Name)
+			u.SendMsg(onlineMsg)
+		}
+		u.Server.mapLock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		// 消息格式： rename|张三
+		newName := strings.Split(msg, "|")[1]
+
+		// 判断name是否存在
+		_, ok := u.Server.OnlineMap[newName]
+		if ok {
+			u.SendMsg("Current username are taken\n")
+		} else {
+			u.Server.mapLock.Lock()
+			delete(u.Server.OnlineMap, u.Name)
+			u.Server.OnlineMap[newName] = u
+			u.Server.mapLock.Unlock()
+
+			u.Name = newName
+			u.SendMsg(fmt.Sprintf("Your name have changed: %s\n", u.Name))
+		}
+	} else {
+		u.Server.BroadCast(u, msg)
+	}
 }
