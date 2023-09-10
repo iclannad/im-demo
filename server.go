@@ -88,7 +88,7 @@ func (s *Server) Handler(conn net.Conn) {
 	for {
 		select {
 		case <-isLive:
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Minute * 10):
 			// 当前用户已经超时
 			user.SendMsg("You are kicked out\n")
 			close(user.C)

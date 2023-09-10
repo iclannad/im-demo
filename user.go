@@ -95,6 +95,30 @@ func (u *User) DoMessage(msg string) {
 			u.Name = newName
 			u.SendMsg(fmt.Sprintf("Your name have changed: %s\n", u.Name))
 		}
+	} else if len(msg) > 4 && msg[:3] == "to|" {
+		// 消息格式： to|张三|消息内容
+
+		// 1 获取对方用户名
+		remoteName := strings.Split(msg, "|")[1]
+		if remoteName == "" {
+			u.SendMsg("Message format error, pelse use to|zhangsan|content\n")
+			return
+		}
+
+		// 2 根据用户名，得到对方user对象
+		remoteUser, ok := u.Server.OnlineMap[remoteName]
+		if !ok {
+			u.SendMsg("User isn't exist\n")
+			return
+		}
+
+		// 3 获取消息内容，通过对方user对象发送过去
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			u.SendMsg("No content, please try again\n")
+			return
+		}
+		remoteUser.SendMsg(fmt.Sprintf("%s send msg to you:%s", u.Name, content))
 	} else {
 		u.Server.BroadCast(u, msg)
 	}
